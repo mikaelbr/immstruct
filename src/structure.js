@@ -305,7 +305,7 @@ function onlyOnEvent(eventName, fn) {
   return function (newData, oldData, keyPath) {
     var info = analyze(newData, oldData, keyPath);
     if (info.eventName !== eventName) return;
-    return fn(newData, oldData, keyPath);
+    return fn.apply(fn, info.arguments);
   };
 }
 
