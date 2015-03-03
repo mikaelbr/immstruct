@@ -59,11 +59,12 @@ function Structure (options) {
   }
 
   this._pathListeners = [];
-  this.on('swap', function (newData, oldData, keyPath) {
-    listListenerMatching(self._pathListeners, pathString(keyPath)).forEach(function (fns) {
-      fns.forEach(function (fn) {
+  this.on('_swap', function (newData, oldData, keyPath) {
+    var args = [newData, oldData, keyPath];
+    listListenerMatching(self._pathListeners, pathString(keyPath)).forEach(function (fns, idx) {
+      fns.forEach(function (fn, idx) {
         if (typeof fn !== 'function') return;
-        fn(newData, oldData, keyPath);
+        return fn(args);
       });
     });
   });
@@ -95,32 +96,13 @@ module.exports = Structure;
  * @returns {Cursor} Gives a Cursor from Immutable.js
  */
 Structure.prototype.cursor = function (path) {
-  var self = this;
   path = path || [];
 
   if (!this.current) {
     throw new Error('No structure loaded.');
   }
 
-  var changeListener = function (newRoot, oldRoot, path) {
-    if(self.current === oldRoot) {
-      return self.current = newRoot;
-    }
-    // Othewise an out-of-sync change occured. We ignore `oldRoot`, and focus on
-    // changes at path `path`, and sync this to `self.current`.
-
-    if(!hasIn(newRoot, path)) {
-      return self.current = self.current.removeIn(path);
-    }
-
-    // Update an existing path or add a new path within the current map.
-    return self.current = self.current.setIn(path, newRoot.getIn(path));
-  };
-
-  changeListener = handleHistory(this, changeListener);
-  changeListener = handleSwap(this, changeListener);
-  changeListener = handlePersisting(this, changeListener);
-  return Cursor.from(self.current, path, changeListener);
+  return Cursor.from(this.current, path, handleChangelistenerCtx(this));
 };
 
 /**
@@ -169,7 +151,7 @@ Structure.prototype.reference = function (path) {
   var listenerNs = self._pathListeners[pathId];
   var cursor = this.cursor(path);
 
-  var changeListener = function (newRoot, oldRoot, changedPath) { cursor = self.cursor(path); };
+  var changeListener = function (args) { cursor = self.cursor(path); };
   var referenceListeners = [changeListener];
   this._pathListeners[pathId] = !listenerNs ? referenceListeners : listenerNs.concat(changeListener);
 
@@ -211,6 +193,8 @@ Structure.prototype.reference = function (path) {
       if (eventName && eventName !== 'swap') {
         newFn = onlyOnEvent(eventName, newFn);
       }
+
+      newFn = makeAsync(newFn);
 
       self._pathListeners[pathId] = self._pathListeners[pathId].concat(newFn);
       referenceListeners = referenceListeners.concat(newFn);
@@ -370,21 +354,45 @@ Structure.prototype.undoUntil = function(structure) {
   return structure;
 };
 
+var handleChangelistener = function (newRoot, oldRoot, path) {
+  if(this.current === oldRoot) {
+    return this.current = newRoot;
+  }
+  // Othewise an out-of-sync change occured. We ignore `oldRoot`, and focus on
+  // changes at path `path`, and sync this to `this.current`.
+
+  if(!hasIn(newRoot, path)) {
+    return this.current = this.current.removeIn(path);
+  }
+
+  // Update an existing path or add a new path within the current map.
+  return this.current = this.current.setIn(path, newRoot.getIn(path));
+};
+
+// chain up changelisteners
+var changelisteners = [handleHistory, handleSwap, handlePersisting];
+for(var idx in changelisteners) {
+  var listener = changelisteners[idx];
+  handleChangelistener = detourPipe(handleChangelistener, listener);
+}
+
+var handleChangelistenerCtx = function(ctx) {
+  return function() {
+    handleChangelistener.apply(ctx, arguments);
+  }
+}
 
 // Private decorators.
 
 // Update history if history is active
-function handleHistory (emitter, fn) {
-  return function (newData, oldData, path) {
-    var newStructure = fn.apply(fn, arguments);
-    if (!emitter.history || (newData === oldData)) return newStructure;
+function handleHistory (newData, oldData, path, newStructure) {
+  if (!this.history || (newData === oldData)) return newStructure;
 
-    emitter.history = emitter.history
-      .take(++emitter._currentRevision)
-      .push(emitter.current);
+  this.history = this.history
+    .take(++this._currentRevision)
+    .push(this.current);
 
-    return newStructure;
-  };
+  return newStructure;
 }
 
 // Update history if history is active
@@ -406,30 +414,31 @@ var possiblyEmitAnimationFrameEvent = (function () {
 }());
 
 // Emit swap event on values are swapped
-function handleSwap (emitter, fn) {
-  return function (newData, oldData, keyPath) {
-    var newStructure = fn.apply(fn, arguments);
-    if(newData === oldData) return newStructure;
+function handleSwap (newData, oldData, keyPath, newStructure) {
+  if(newData === oldData) return newStructure;
 
-    emitter.emit('swap', newStructure, oldData, keyPath);
-    possiblyEmitAnimationFrameEvent(emitter, newStructure, oldData, keyPath);
+  var self = this;
+  this.emit('_swap', newStructure, oldData, keyPath);
+  setTimeout(function() {
+    self.emit('swap', newStructure, oldData, keyPath);
+    possiblyEmitAnimationFrameEvent(self, newStructure, oldData, keyPath);
+  }, 0);
 
-    return newStructure;
-  };
+  return newStructure;
 }
 
 // Map changes to update events (delete/change/add).
-function handlePersisting (emitter, fn) {
-  return function (newData, oldData, path) {
-    var newStructure = fn.apply(fn, arguments);
+function handlePersisting (newData, oldData, path, newStructure) {
     if(newData === oldData) return newStructure;
     var info = analyze(newData, oldData, path);
 
     if (info.eventName) {
-      emitter.emit.apply(emitter, [info.eventName].concat(info.arguments));
+      var self = this;
+      setTimeout(function() {
+        self.emit.apply(self, [info.eventName].concat(info.arguments));
+      }, 0);
     }
     return newStructure;
-  };
 }
 
 // Private helpers.
@@ -520,4 +529,19 @@ function isImmutableStructure (data) {
 
 function immutableSafeCheck (ns, method, data) {
   return Immutable[ns] && Immutable[ns][method] && Immutable[ns][method](data);
+}
+
+function detourPipe(detour, dest) {
+    return function(newRoot, oldRoot, path) {
+        var out = detour.call(this, newRoot, oldRoot, path);
+        return dest.call(this, newRoot, oldRoot, path, out);
+    }
+}
+
+function makeAsync(fn) {
+  return function(args) {
+    setTimeout(function() {
+      fn.apply(fn, args)
+    }, 0);
+  };
 }
