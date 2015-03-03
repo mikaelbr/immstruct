@@ -343,42 +343,50 @@ describe('structure', function () {
         });
       });
 
-      it('should resync immutable collection when a stale cursor changed existing property', function() {
-
+      it('should resync immutable collection when a stale cursor changed existing property', function(done) {
+        var swapcalls = 0;
         var struct = new Structure({
           data: { foo: 42, bar: 24 }
         });
 
         var foo = struct.cursor('foo');
         var bar = struct.cursor('bar');
-        var current = struct.current;
+        var current1 = struct.current;
 
-        struct.once('swap', function(newRoot, oldRoot) {
+        struct.on('swap', function(newRoot, oldRoot) {
+          swapcalls++;
+          if(swapcalls !== 1) return;
+
           oldRoot.toJS().should.eql({ foo: 42, bar: 24 });
-          current.should.equal(oldRoot);
-          foo._rootData.should.equal(current);
+          current1.should.equal(oldRoot);
+          foo._rootData.should.equal(current1);
 
           newRoot.toJS().should.eql({ foo: 43, bar: 24 });
-          struct.current.toJS().should.eql(newRoot.toJS());
+          currentSwap1.toJS().should.eql(newRoot.toJS());
         });
 
         foo.update(function(val) {
           val.should.equal(42);
           return val + 1;
         });
+        var currentSwap1 = struct.current;
 
         struct.current.toJS().should.eql({ foo: 43, bar: 24 });
 
-        current = struct.current;
-        struct.once('swap', function(newRoot, oldRoot) {
+        var current2 = struct.current;
+        struct.on('swap', function(newRoot, oldRoot) {
+          if(swapcalls !== 2) return;
+
           oldRoot.toJS().should.eql({ foo: 42, bar: 24 });
           bar._rootData.should.equal(oldRoot);
 
-          current.toJS().should.not.eql(oldRoot.toJS());
-          current.toJS().should.not.eql(newRoot.toJS());
+          current2.toJS().should.not.eql(oldRoot.toJS());
+          current2.toJS().should.not.eql(newRoot.toJS());
           newRoot.toJS().should.not.eql(oldRoot.toJS());
 
           newRoot.toJS().should.eql({ foo: 43, bar: 25 });
+
+          done();
         });
 
         bar.update(function(val) {
@@ -423,36 +431,43 @@ describe('structure', function () {
 
       it('should resync immutable collection when a stale cursor adds new property', function() {
 
+        var swap1 = 0, swap2 = 0;
+
         var struct = new Structure({
           data: { foo: {}, bar: {} }
         });
 
         var foo = struct.cursor('foo');
         var bar = struct.cursor('bar');
-        var current = struct.current;
+        var current1 = struct.current;
 
-        struct.once('swap', function(newRoot, oldRoot) {
+        struct.on('swap', function(newRoot, oldRoot) {
+          if(swap1++ !== 0) return;
+
           oldRoot.toJS().should.eql({ foo: {}, bar: {} });
-          current.should.equal(oldRoot);
-          foo._rootData.should.equal(current);
+          current1.should.equal(oldRoot);
+          foo._rootData.should.equal(current1);
 
           newRoot.toJS().should.eql({ foo: { a: 42 }, bar: {} });
-          struct.current.toJS().should.eql(newRoot.toJS());
+          currentSwap1.toJS().should.eql(newRoot.toJS());
         });
 
         foo.update('a', function() {
           return 42;
         });
+        var currentSwap1 = struct.current;
 
         struct.current.toJS().should.eql({ foo: {a: 42}, bar: {} });
 
-        current = struct.current;
-        struct.once('swap', function(newRoot, oldRoot) {
+        var current2 = struct.current;
+        struct.on('swap', function(newRoot, oldRoot) {
+          if(swap2++ !== 1) return;
+
           oldRoot.toJS().should.eql({ foo: {}, bar: {} });
           bar._rootData.should.equal(oldRoot);
 
-          current.toJS().should.not.eql(oldRoot.toJS());
-          current.toJS().should.not.eql(newRoot.toJS());
+          current2.toJS().should.not.eql(oldRoot.toJS());
+          current2.toJS().should.not.eql(newRoot.toJS());
           newRoot.toJS().should.not.eql(oldRoot.toJS());
 
           newRoot.toJS().should.eql({ foo: {a: 42}, bar: { b: "hello" } });
@@ -493,7 +508,9 @@ describe('structure', function () {
         structure.cursor().delete('subtree');
       });
 
-      it('should resync immutable collection when a stale cursor deletes existing property', function() {
+      it('should resync immutable collection when a stale cursor deletes existing property', function(done) {
+
+        var swap1 = 0, swap2 = 0;
 
         var struct = new Structure({
           data: { foo: { a: 42 }, bar: { b: 24 } }
@@ -501,31 +518,38 @@ describe('structure', function () {
 
         var foo = struct.cursor('foo');
         var bar = struct.cursor('bar');
-        var current = struct.current;
+        var current1 = struct.current;
 
-        struct.once('swap', function(newRoot, oldRoot) {
+        struct.on('swap', function(newRoot, oldRoot) {
+          if(swap1++ !== 0) return;
+
           oldRoot.toJS().should.eql({ foo: { a: 42 }, bar: { b: 24 } });
-          current.should.equal(oldRoot);
-          foo._rootData.should.equal(current);
+          current1.should.equal(oldRoot);
+          foo._rootData.should.equal(current1);
 
           newRoot.toJS().should.eql({ foo: {}, bar: { b: 24 } });
-          struct.current.toJS().should.eql(newRoot.toJS());
+          currentSwap1.toJS().should.eql(newRoot.toJS());
         });
 
         foo.delete('a');
+        var currentSwap1 = struct.current;
 
         struct.current.toJS().should.eql({ foo: {}, bar: {b: 24} });
 
-        current = struct.current;
-        struct.once('swap', function(newRoot, oldRoot) {
+        var current2 = struct.current;
+        struct.on('swap', function(newRoot, oldRoot) {
+          if(swap2++ !== 1) return;
+
           oldRoot.toJS().should.eql({ foo: { a: 42 }, bar: { b: 24 } });
           bar._rootData.should.equal(oldRoot);
 
-          current.toJS().should.not.eql(oldRoot.toJS());
-          current.toJS().should.not.eql(newRoot.toJS());
+          current2.toJS().should.not.eql(oldRoot.toJS());
+          current2.toJS().should.not.eql(newRoot.toJS());
           newRoot.toJS().should.not.eql(oldRoot.toJS());
 
           newRoot.toJS().should.eql({ foo: {}, bar: {} });
+
+          return done();
         });
 
         bar.delete('b');
@@ -769,7 +793,7 @@ describe('structure', function () {
         structure.cursor('foo').update(function () { return 'updated'; });
       });
 
-      it('should support nested paths', function () {
+      it('should support nested paths', function (done) {
         var structure = new Structure({
           data: {
             someBox: { message: 'Hello World!' }
@@ -778,7 +802,10 @@ describe('structure', function () {
 
         var ref = structure.reference(['someBox', 'message']);
         var newCursor = ref.cursor().update(function () { return 'Hello, World!'; });
-        ref.cursor().deref().should.equal(newCursor.deref());
+        setTimeout(function() {
+          ref.cursor().deref().should.equal(newCursor.deref());
+          return done();
+        })
       });
 
       it('should trigger only change events when specifying event type', function (done) {
@@ -944,12 +971,18 @@ describe('structure', function () {
         var unsubscribe = ref.observe(function () { changed = true; });
         unsubscribe();
 
+        var calls = 0;
         ref.observe(function () { 
           changed.should.equal(false);
-          done();
+          calls++;
         });
         unsubscribe();
         ref.cursor().update(function () { return 'updated'; });
+
+        setTimeout(function(){
+          calls.should.equal(1);
+          return done();
+        });
       });
 
       it('should not trigger multiple removed listener', function (done) {
@@ -960,14 +993,21 @@ describe('structure', function () {
         var ref = structure.reference('foo');
 
         var i = 0;
+        var k = 0;
         var unsubscribe = ref.observe(function () { i++; });
         unsubscribe();
 
         unsubscribe = ref.observe(function () { i++; });
         unsubscribe();
 
-        ref.observe(function () { if(i == 0) done(); });
+        ref.observe(function () { k++; });
         ref.cursor().update(function () { return 'updated'; });
+
+        setTimeout(function() {
+          k.should.equal(1);
+          i.should.equal(0);
+          done();
+        })
       });
 
       it('should unsubscribe all listeners for path', function () {
@@ -988,7 +1028,7 @@ describe('structure', function () {
         changed.should.equal(false);
       });
 
-      it('should only remove listeners on given path', function () {
+      it('should only remove listeners on given path', function (done) {
         var structure = new Structure({
           data: { 'foo': 'bar', 'bar': 'foo' }
         });
@@ -1012,7 +1052,12 @@ describe('structure', function () {
         firstChange.should.equal(false);
 
         cursor2.update(function() { return 'changed'; });
-        secondChange.should.equal(true);
+
+        setTimeout(function() {
+          secondChange.should.equal(true);
+          return done();
+        })
+
       });
 
       it('should remove listeners for all local references', function () {
