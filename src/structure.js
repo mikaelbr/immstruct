@@ -60,17 +60,11 @@ function Structure (options) {
 
   this._pathListeners = [];
   this.on('_swap', function (newData, oldData, keyPath) {
+    var args = [newData, oldData, keyPath];
     listListenerMatching(self._pathListeners, pathString(keyPath)).forEach(function (fns, idx) {
       fns.forEach(function (fn, idx) {
         if (typeof fn !== 'function') return;
-
-        if (idx !== 0) {
-          setTimeout(function() {
-            fn(newData, oldData, keyPath);
-          }, 0);
-          return;
-        }
-        return fn(newData, oldData, keyPath);
+        return fn(args);
       });
     });
   });
@@ -157,7 +151,7 @@ Structure.prototype.reference = function (path) {
   var listenerNs = self._pathListeners[pathId];
   var cursor = this.cursor(path);
 
-  var changeListener = function (newRoot, oldRoot, changedPath) { cursor = self.cursor(path); };
+  var changeListener = function (args) { cursor = self.cursor(path); };
   var referenceListeners = [changeListener];
   this._pathListeners[pathId] = !listenerNs ? referenceListeners : listenerNs.concat(changeListener);
 
@@ -199,6 +193,8 @@ Structure.prototype.reference = function (path) {
       if (eventName && eventName !== 'swap') {
         newFn = onlyOnEvent(eventName, newFn);
       }
+
+      newFn = makeAsync(newFn);
 
       self._pathListeners[pathId] = self._pathListeners[pathId].concat(newFn);
       referenceListeners = referenceListeners.concat(newFn);
@@ -540,4 +536,12 @@ function detourPipe(detour, dest) {
         var out = detour.call(this, newRoot, oldRoot, path);
         return dest.call(this, newRoot, oldRoot, path, out);
     }
+}
+
+function makeAsync(fn) {
+  return function(args) {
+    setTimeout(function() {
+      fn.apply(fn, args)
+    }, 0);
+  };
 }
