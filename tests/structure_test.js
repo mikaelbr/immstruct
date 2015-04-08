@@ -781,6 +781,18 @@ describe('structure', function () {
         ref.cursor().deref().should.equal(newCursor.deref());
       });
 
+      it('should support nested path strings', function () {
+        var structure = new Structure({
+          data: {
+            someBox: { message: 'Hello World!' }
+          }
+        });
+
+        var ref = structure.reference('someBox.message');
+        var newCursor = ref.cursor().update(function () { return 'Hello, World!'; });
+        ref.cursor().deref().should.equal(newCursor.deref());
+      });
+
       it('should trigger only change events when specifying event type', function (done) {
         var structure = new Structure({
           data: { 'foo': 'bar' }
