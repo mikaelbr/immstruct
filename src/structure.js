@@ -484,35 +484,28 @@ function hasIn(cursor, path) {
   return cursor.getIn(path, NOT_SET) !== NOT_SET;
 }
 
-function pathString(path) {
-  var topLevel = 'global';
-  if (!path || !path.length) return topLevel;
-  if (typeof path == 'string') {
-    return topLevel + '.' + path;
-  } else {
-    return [topLevel].concat(path).join('.');
-  }
-}
-
-function listListenerMatching (listeners, basePath) {
-  var path = basePath.split("."),
-      pathStr = "",
+function listListenerMatching (listeners, path) {
+  var pathArray = [],
       matches = [];
 
+  path = path || [];
+
   path.forEach(function(pathPart) {
-    pathStr = pathStr ? pathStr + "." + pathPart : pathPart;
-    matches = matches.concat(getListenerNs(listeners, pathStr));
+    pathArray = pathArray.concat(pathPart);
+    matches = matches.concat(getListenerNs(listeners, pathArray));
   });
 
   return matches;
 }
 
-function getListenerNs (listeners, basePath) {
-  var matchedListeners = utils.deepGet(listeners, basePath + "._listeners");
+function getListenerNs (listeners, path) {
+  path = path || [];
+  path = path.concat("__listeners__");
+  var matchedListeners = utils.deepGet(listeners, path);
 
   if (!matchedListeners) {
     matchedListeners = [];
-    utils.deepSet(listeners, basePath + "._listeners", matchedListeners);
+    utils.deepSet(listeners, path, matchedListeners);
   }
 
   return matchedListeners;
