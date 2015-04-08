@@ -704,7 +704,6 @@ describe('structure', function () {
         return 'updated';
       });
       newCursor.deref().should.equal('updated');
-      console.log("ref.cursor()", ref.cursor());
       ref.cursor().toJS().should.eql({
         'bar': 'updated'
       });
@@ -779,6 +778,18 @@ describe('structure', function () {
         });
 
         var ref = structure.reference(['someBox', 'message']);
+        var newCursor = ref.cursor().update(function () { return 'Hello, World!'; });
+        ref.cursor().deref().should.equal(newCursor.deref());
+      });
+
+      it('should support nested path strings', function () {
+        var structure = new Structure({
+          data: {
+            someBox: { message: 'Hello World!' }
+          }
+        });
+
+        var ref = structure.reference('someBox.message');
         var newCursor = ref.cursor().update(function () { return 'Hello, World!'; });
         ref.cursor().deref().should.equal(newCursor.deref());
       });

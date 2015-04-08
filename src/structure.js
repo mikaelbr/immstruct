@@ -62,7 +62,7 @@ function Structure (options) {
 
   this._pathListeners = {};
   this.on('swap', function (newData, oldData, keyPath) {
-    listListenerMatching(self._pathListeners, pathString(keyPath)).forEach(function (fn) {
+    listListenerMatching(self._pathListeners, keyPath).forEach(function (fn) {
       if (typeof fn == 'function') {
         fn(newData, oldData, keyPath);
       }
@@ -97,7 +97,7 @@ module.exports = Structure;
  */
 Structure.prototype.cursor = function (path) {
   var self = this;
-  path = (path && path.substr) ? path.split(".") : path || [];
+  path = path && path.substr ? [path] : path || [];
 
   if (!this.current) {
     throw new Error('No structure loaded.');
@@ -167,11 +167,10 @@ Structure.prototype.reference = function (path) {
     path = path._keyPath;
   }
 
-  path = (path && path.substr) ? path.split(".") : path || [];
+  path = path && path.substr ? [path] : path || [];
 
   var self = this,
-      pathId = pathString(path),
-      listenerNs = getListenerNs(self._pathListeners, pathId),
+      listenerNs = getListenerNs(self._pathListeners, path),
       cursor = this.cursor(path),
       changeListener = function() {
         cursor = self.cursor(path);
@@ -213,7 +212,7 @@ Structure.prototype.reference = function (path) {
     observe: function (eventName, newFn) {
       if (typeof eventName === 'function') {
         newFn = eventName;
-        eventName = undefined;
+        eventName = void 0;
       }
       if (this._dead || typeof newFn !== 'function') return;
       if (eventName && eventName !== 'swap') {
@@ -251,8 +250,6 @@ Structure.prototype.reference = function (path) {
      * @returns {Cursor} Immutable.js cursor
      */
     cursor: function (path) {
-      path = (path && path.substr) ? path.split(".") : path || [];
-
       if (path) {
         return cursor.cursor(path);
       } else {
@@ -281,13 +278,13 @@ Structure.prototype.reference = function (path) {
      */
     destroy: function () {
       removeAllListenersBut(listenerNs);
-      cursor = undefined;
+      cursor = void 0;
 
       this._dead = true;
-      this.observe = undefined;
-      this.unobserveAll = undefined;
-      this.cursor = undefined;
-      this.destroy = undefined;
+      this.observe = void 0;
+      this.unobserveAll = void 0;
+      this.cursor = void 0;
+      this.destroy = void 0;
     }
   };
 };
@@ -487,35 +484,28 @@ function hasIn(cursor, path) {
   return cursor.getIn(path, NOT_SET) !== NOT_SET;
 }
 
-function pathString(path) {
-  var topLevel = 'global';
-  if (!path || !path.length) return topLevel;
-  if (typeof path == 'string') {
-    return topLevel + '.' + path;
-  } else {
-    return [topLevel].concat(path).join('.');
-  }
-}
-
-function listListenerMatching (listeners, basePath) {
-  var path = basePath.split("."),
-      pathStr = "",
+function listListenerMatching (listeners, path) {
+  var pathArray = [],
       matches = [];
 
+  path = path || [];
+
   path.forEach(function(pathPart) {
-    pathStr = pathStr ? pathStr + "." + pathPart : pathPart;
-    matches = matches.concat(getListenerNs(listeners, pathStr));
+    pathArray = pathArray.concat(pathPart);
+    matches = matches.concat(getListenerNs(listeners, pathArray));
   });
 
   return matches;
 }
 
-function getListenerNs (listeners, basePath) {
-  var matchedListeners = utils.deepGet(listeners, basePath + "._listeners");
+function getListenerNs (listeners, path) {
+  path = path || [];
+  path = path.concat("__listeners__");
+  var matchedListeners = utils.deepGet(listeners, path);
 
   if (!matchedListeners) {
     matchedListeners = [];
-    utils.deepSet(listeners, basePath + "._listeners", matchedListeners);
+    utils.deepSet(listeners, path, matchedListeners);
   }
 
   return matchedListeners;

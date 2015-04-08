@@ -5,11 +5,11 @@ module.exports.generateRandomKey = function (len) {
   return Math.random().toString(36).substring(2).substring(0, len);
 };
 
-module.exports.deepGet = function(collection, path){
+module.exports.deepGet = function(collection, path) {
   var current = collection,
-      properties = path.split(".");
+      path = path || [];
 
-  properties.forEach(function(property) {
+  path.forEach(function(property) {
     if (current && property in current) {
       current = current[property];
     } else {
@@ -21,24 +21,19 @@ module.exports.deepGet = function(collection, path){
   return current;
 };
 
-module.exports.deepSet = function(collection, path, value){
-  var currentObject = collection,
-      properties = path.split(".");
 
-  properties.forEach(function(property, index) {
-    if (index + 1 === properties.length) {
+module.exports.deepSet = function(collection, path, value) {
+  var currentObject = collection,
+      path = path || [];
+
+  path.forEach(function(property, index) {
+    if (index + 1 === path.length) {
       currentObject[property] = value;
-    } else if (!(typeof currentObject[property] == 'object')) {
-      currentObject[property] = isArrayKey(properties[index + 1]) ? [] : {};
+    } else if (!currentObject[property]) {
+      currentObject[property] = {};
     }
     currentObject = currentObject[property];
   });
 
   return collection;
 };
-
-function isArrayKey(key){
-  var array = [];
-  array[key] = null;
-  return array.length > 0;
-}
