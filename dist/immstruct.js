@@ -1,28 +1,10 @@
 /**
-* immstruct v1.5.0
+* immstruct v1.4.0
 * Authors: Mikael Brevik, @torgeir
 ***************************************/
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.immstruct=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
-'use strict';
 var Structure = _dereq_('./src/structure');
 
-/**
- * Creates a new instance of Immstruct, having it's own list
- * of Structure instances.
- *
- * ### Examples:
- *
- *     var ImmstructInstance = require('immstruct').Immstruct;
- *     var immstruct = new ImmstructInstance();
- *     var structure = immstruct.get({ data: });
- *
- * @property {Array} instances Array of `Structure` instances.
- *
- * @class {Immstruct}
- * @constructor
- * @returns {Immstruct}
- * @api public
- */
 function Immstruct () {
   if (!(this instanceof Immstruct)) {
     return new Immstruct();
@@ -31,24 +13,6 @@ function Immstruct () {
   this.instances = {};
 }
 
-/**
- *
- * Gets or creates a new instance of {Structure}. Provide optional
- * key to be able to retrieve it from list of instances. If no key
- * is provided, a random key will be generated.
- *
- * ### Examples:
- * ```js
- * var immstruct = require('immstruct');
- * var structure = immstruct.get('myStruct', { foo: 'Hello' });
- * ```
- * @param {String} [key] - defaults to random string
- * @param {Object|Immutable} [data] - defaults to empty data
- *
- * @returns {Structure}
- * @module immstruct.get
- * @api public
- */
 Immstruct.prototype.get = function (key, data) {
   return getInstance(this, {
     key: key,
@@ -56,62 +20,14 @@ Immstruct.prototype.get = function (key, data) {
   });
 };
 
-/**
- * Clear the entire list of `Structure` instances from the Immstruct
- * instance. You would do this to start from scratch, freeing up memory.
- *
- * ### Examples:
- *
- *     var immstruct = require('immstruct');
- *     immstruct.clear();
- *
- * @module immstruct.clear
- * @api public
- */
 Immstruct.prototype.clear = function () {
   this.instances = {};
 };
 
-/**
- * Remove one `Structure` instance from the Immstruct instances list.
- * Provided by key
- *
- * ### Examples:
- *
- *     var immstruct = require('immstruct');
- *     immstruct('myKey', { foo: 'hello' });
- *     immstruct.remove('myKey');
- *
- * @param {String} key
- *
- * @module immstruct.remove
- * @api public
- * @returns {Boolean}
- */
 Immstruct.prototype.remove = function (key) {
   return delete this.instances[key];
 };
 
-
-/**
- * Gets or creates a new instance of `Structure` with history (undo/redo)
- * activated per default. Same usage and signature as regular `Immstruct.get`.
-
- * Provide optional key to be able to retrieve it from list of instances.
- * If no key is provided, a random key will be generated.
- *
- * ### Examples:
- *
- *     var immstruct = require('immstruct');
- *     var structure = immstruct.withHistory('myStruct', { foo: 'Hello' });
- *
- * @param {String} [key] - defaults to random string
- * @param {Object|Immutable} [data] - defaults to empty data
- *
- * @module immstruct.withHistory
- * @api public
- * @returns {Structure}
- */
 Immstruct.prototype.withHistory = function (key, data) {
   return getInstance(this, {
     key: key,
@@ -122,35 +38,6 @@ Immstruct.prototype.withHistory = function (key, data) {
 
 var inst = new Immstruct();
 
-/**
- * This is a default instance of `Immstruct` as well as a shortcut for
- * creating `Structure` instances (See `Immstruct.get` and `Immstruct`).
- * This is what is returned from `require('immstruct')`.
- *
- * From `Immstruct.get`:
- * Gets or creates a new instance of {Structure} in the default Immstruct
- * instance. A link to `immstruct.get()`. Provide optional
- * key to be able to retrieve it from list of instances. If no key
- * is provided, a random key will be generated.
- *
- * ### Examples:
- *
- *     var immstruct = require('immstruct');
- *     var structure = immstruct('myStruct', { foo: 'Hello' });
- *     var structure2 = immstruct.withHistory({ bar: 'Bye' });
- *     immstruct.remove('myStruct');
- *     // ...
- *
- * @param {String} [key] - defaults to random string
- * @param {Object|Immutable} [data] - defaults to empty data
- *
- * @api public
- * @see {@link Immstruct}
- * @see {Immstruct.prototype.get}
- * @module immstruct
- * @class {Immstruct}
- * @returns {Structure|Function}
- */
 module.exports = function (key, data) {
   return getInstance(inst, {
     key: key,
@@ -168,9 +55,8 @@ module.exports.withHistory = function (key, data) {
 
 module.exports.Structure = Structure;
 module.exports.Immstruct = Immstruct;
-module.exports.clear     = inst.clear.bind(inst);
-module.exports.remove    = inst.remove.bind(inst);
-module.exports.get       = inst.get.bind(inst);
+module.exports.clear = inst.clear.bind(inst);
+module.exports.remove = inst.remove.bind(inst);
 Object.defineProperty(module.exports, 'instances', {
   get: function() { return inst.instances; },
   enumerable: true,
@@ -424,7 +310,7 @@ module.exports = EventEmitter;
 
 },{}],3:[function(_dereq_,module,exports){
 /**
- *  Copyright (c) 2014-2015, Facebook, Inc.
+ *  Copyright (c) 2014, Facebook, Inc.
  *  All rights reserved.
  *
  *  This source code is licensed under the BSD-style license found in the
@@ -511,32 +397,6 @@ IndexedCursorPrototype.getIn = function(keyPath, notSetValue) {
 IndexedCursorPrototype.set =
 KeyedCursorPrototype.set = function(key, value) {
   return updateCursor(this, function (m) { return m.set(key, value); }, [key]);
-}
-
-IndexedCursorPrototype.push = function(/* values */) {
-  var args = arguments;
-  return updateCursor(this, function (m) {
-    return m.push.apply(m, args);
-  });
-}
-
-IndexedCursorPrototype.pop = function() {
-  return updateCursor(this, function (m) {
-    return m.pop();
-  });
-}
-
-IndexedCursorPrototype.unshift = function(/* values */) {
-  var args = arguments;
-  return updateCursor(this, function (m) {
-    return m.unshift.apply(m, args);
-  });
-}
-
-IndexedCursorPrototype.shift = function() {
-  return updateCursor(this, function (m) {
-    return m.shift();
-  });
 }
 
 IndexedCursorPrototype.setIn =
@@ -684,13 +544,6 @@ function wrappedValue(cursor, keyPath, value) {
 }
 
 function subCursor(cursor, keyPath, value) {
-  if (arguments.length < 3) {
-    return makeCursor( // call without value
-      cursor._rootData,
-      newKeyPath(cursor._keyPath, keyPath),
-      cursor._onChange
-    );
-  }
   return makeCursor(
     cursor._rootData,
     newKeyPath(cursor._keyPath, keyPath),
@@ -762,48 +615,24 @@ if (typeof Object.create === 'function') {
 
 },{}],5:[function(_dereq_,module,exports){
 (function (global){
-'use strict';
-
 var Immutable = (typeof window !== "undefined" ? window.Immutable : typeof global !== "undefined" ? global.Immutable : null);
 var Cursor = _dereq_('immutable/contrib/cursor');
 var EventEmitter = _dereq_('eventemitter3').EventEmitter;
 var inherits = _dereq_('inherits');
 var utils = _dereq_('./utils');
 
- /**
- * Creates a new `Structure` instance. Also accessible through
- * `Immstruct.Structre`.
+/************************************
  *
- * ### Examples:
+ * ## Public API.
+ *   Constructor({ history: bool, key: string, data: structure|object })
+ *   .cursor(path)
+ *   .reference(path)
+ *   .forceHasSwapped(newData, oldData, keyPath)
+ *   .undo(steps)
+ *   .redo(steps)
+ *   .undoUntil(structure)
  *
- *     var Structure = require('immstruct/structure');
- *     var s = new Structure({ data: { foo: 'bar' }});
- *
- *     // Or:
- *     // var Structure = require('immstruct').Structure;
- *
- * ### Options
- *
- * ```
- * {
- *   key: String, // Defaults to random string
- *   data: Object|Immutable, // defaults to empty Map
- *   history: Boolean // Defaults to false
- * }
- * ```
- *
- * @property {Immutable.List} history `Immutable.List` with history.
- * @property {Object|Immutable} current Provided data as immutable data
- * @property {String} key Generated or provided key.
- *
- *
- * @param {{ key: String, data: Object, history: Boolean }} [options] - defaults to random key and empty data (immutable structure). No history
- *
- * @constructor
- * @class {Structure}
- * @returns {Structure}
- * @api public
- */
+ ************************************/
 function Structure (options) {
   var self = this;
 
@@ -824,12 +653,13 @@ function Structure (options) {
     this._currentRevision = 0;
   }
 
-  this._pathListeners = {};
+  this._pathListeners = [];
   this.on('swap', function (newData, oldData, keyPath) {
-    listListenerMatching(self._pathListeners, pathString(keyPath)).forEach(function (fn) {
-      if (typeof fn == 'function') {
+    listListenerMatching(self._pathListeners, pathString(keyPath)).forEach(function (fns) {
+      fns.forEach(function (fn) {
+        if (typeof fn !== 'function') return;
         fn(newData, oldData, keyPath);
-      }
+      });
     });
   });
 
@@ -838,30 +668,9 @@ function Structure (options) {
 inherits(Structure, EventEmitter);
 module.exports = Structure;
 
-
-/**
- * Create a Immutable.js Cursor for a given `path` on the `current` structure (see `Structure.current`).
- * Changes made through created cursor will cause a `swap` event to happen (see `Events`).
- *
- * ### Examples:
- *
- *     var Structure = require('immstruct/structure');
- *     var s = new Structure({ data: { foo: 'bar', a: { b: 'foo' } }});
- *     s.cursor().set('foo', 'hello');
- *     s.cursor('foo').update(function () { return 'Changed'; });
- *     s.cursor(['a', 'b']).update(function () { return 'bar'; });
- *
- * See more examples in the [tests](https://github.com/omniscientjs/immstruct/blob/master/tests/structure_test.js)
- *
- * @param {String|Array} [path] - defaults to empty string. Can be array for path. See Immutable.js Cursors
- *
- * @api public
- * @module structure.cursor
- * @returns {Cursor} Gives a Cursor from Immutable.js
- */
 Structure.prototype.cursor = function (path) {
   var self = this;
-  path = (path && path.substr) ? path.split(".") : path || [];
+  path = path || [];
 
   if (!this.current) {
     throw new Error('No structure loaded.');
@@ -869,17 +678,17 @@ Structure.prototype.cursor = function (path) {
 
   var changeListener = function (newRoot, oldRoot, path) {
     if(self.current === oldRoot) {
-      self.current = newRoot;
-    } else if (!hasIn(newRoot, path)) {
-      // Othewise an out-of-sync change occured. We ignore `oldRoot`, and focus on
-      // changes at path `path`, and sync this to `self.current`.
-      self.current = self.current.removeIn(path);
-    } else {
-      // Update an existing path or add a new path within the current map.
-      self.current = self.current.setIn(path, newRoot.getIn(path));
+      return self.current = newRoot;
+    }
+    // Othewise an out-of-sync change occured. We ignore `oldRoot`, and focus on
+    // changes at path `path`, and sync this to `self.current`.
+
+    if(!hasIn(newRoot, path)) {
+      return self.current = self.current.removeIn(path);
     }
 
-    return self.current;
+    // Update an existing path or add a new path within the current map.
+    return self.current = self.current.setIn(path, newRoot.getIn(path));
   };
 
   changeListener = handleHistory(this, changeListener);
@@ -888,208 +697,74 @@ Structure.prototype.cursor = function (path) {
   return Cursor.from(self.current, path, changeListener);
 };
 
-/**
- * Creates a reference. A reference can be a pointer to a cursor, allowing
- * you to create cursors for a specific path any time. This is essentially
- * a way to have "always updated cursors" or Reference Cursors. See example
- * for better understanding the concept.
- *
- * References also allow you to listen for changes specific for a path.
- *
- * ### Examples:
- *
- *     var structure = immstruct({
- *       someBox: { message: 'Hello World!' }
- *     });
- *     var ref = structure.reference(['someBox']);
- *
- *     var unobserve = ref.observe(function () {
- *       // Called when data the path 'someBox' is changed.
- *       // Also called when the data at ['someBox', 'message'] is changed.
- *     });
- *
- *     // Update the data using the ref
- *     ref.cursor().update(function () { return 'updated'; });
- *
- *     // Update the data using the initial structure
- *     structure.cursor(['someBox', 'message']).update(function () { return 'updated again'; });
- *
- *     // Remove the listener
- *     unobserve();
- *
- * See more examples in the [readme](https://github.com/omniscientjs/immstruct)
- *
- * @param {String|Array} [path] - defaults to empty string. Can be array for path. See Immutable.js Cursors
- *
- * @api public
- * @module structure.reference
- * @returns {Reference}
- * @constructor
- */
 Structure.prototype.reference = function (path) {
   if (isCursor(path) && path._keyPath) {
     path = path._keyPath;
   }
+  var self = this, pathId = pathString(path);
+  var listenerNs = self._pathListeners[pathId];
+  var cursor = this.cursor(path);
 
-  path = (path && path.substr) ? path.split(".") : path || [];
-
-  var self = this,
-      pathId = pathString(path),
-      listenerNs = getListenerNs(self._pathListeners, pathId),
-      cursor = this.cursor(path),
-      changeListener = function() {
-        cursor = self.cursor(path);
-      };
-
-  if (!listenerNs[0]) {
-    listenerNs.push(changeListener);
-  }
+  var changeListener = function (newRoot, oldRoot, changedPath) { cursor = self.cursor(path); };
+  var referenceListeners = [changeListener];
+  this._pathListeners[pathId] = !listenerNs ? referenceListeners : listenerNs.concat(changeListener);
 
   return {
-    /**
-     * Observe for changes on a reference.
-     *
-     * ### Examples:
-     *
-     *     var ref = structure.reference(['someBox']);
-     *
-     *     var unobserve = ref.observe('delete', function () {
-     *       // Called when data the path 'someBox' is removed from the structure.
-     *     });
-     *
-     * See more examples in the [readme](https://github.com/omniscientjs/immstruct)
-     *
-     * ### Event names
-     * Event names can be either
-     *
-     *  * `add`: When new data/value is added
-     *  * `delete`: When data/value is removed
-     *  * `change`: When data/value is updated and it existed before
-     *  * `swap`: When cursor is updated (new information is set). Emits no values. One use case for this is to re-render design components
-     *
-     * @param {String} [eventName] - Type of change
-     * @param {Function} callback - Callback when referenced data is swapped
-     *
-     * @api public
-     * @module reference.observe
-     * @returns {Function} Function for removing observer (unobserve)
-     */
     observe: function (eventName, newFn) {
       if (typeof eventName === 'function') {
         newFn = eventName;
-        eventName = undefined;
+        eventName = void 0;
       }
       if (this._dead || typeof newFn !== 'function') return;
       if (eventName && eventName !== 'swap') {
         newFn = onlyOnEvent(eventName, newFn);
       }
 
-      listenerNs.push(newFn);
+      self._pathListeners[pathId] = self._pathListeners[pathId].concat(newFn);
+      referenceListeners = referenceListeners.concat(newFn);
 
       return function unobserve () {
-        var fnIndex = listenerNs.indexOf(newFn);
-        if (fnIndex > -1) {
-          listenerNs.splice(fnIndex, 1);
+        var fnIndex = self._pathListeners[pathId].indexOf(newFn);
+        var localListenerIndex = referenceListeners.indexOf(newFn);
+
+        if (referenceListeners[localListenerIndex] === newFn) {
+          referenceListeners.splice(localListenerIndex, 1);
         }
+
+        if (!self._pathListeners[pathId]) return;
+        if (self._pathListeners[pathId][fnIndex] !== newFn) return;
+        self._pathListeners[pathId].splice(fnIndex, 1);
       };
     },
-
-    /**
-     * Create a new, updated, cursor from the base path provded to the
-     * reference. This returns a Immutable.js Cursor as the regular
-     * cursor method. You can also provide a sub-path to create a reference
-     * in a deeper level.
-     *
-     * ### Examples:
-     *
-     *     var ref = structure.reference(['someBox']);
-     *     var cursor = ref.cursor('someSubPath');
-     *     var cursor2 = ref.cursor();
-     *
-     * See more examples in the [readme](https://github.com/omniscientjs/immstruct)
-     *
-     * @param {String} [subpath] - Subpath to a deeper structure
-     *
-     * @api public
-     * @module reference.cursor
-     * @returns {Cursor} Immutable.js cursor
-     */
-    cursor: function (path) {
-      path = (path && path.substr) ? path.split(".") : path || [];
-
-      if (path) {
-        return cursor.cursor(path);
-      } else {
-        return cursor;
-      }
+    cursor: function (subPath) {
+      if (subPath) return cursor.cursor(subPath);
+      return cursor;
     },
-
-    /**
-     * Remove all observers from reference.
-     *
-     * @api public
-     * @module reference.unobserveAll
-     * @returns {Void}
-     */
     unobserveAll: function () {
-      removeAllListenersBut(listenerNs, changeListener);
+      removeAllListenersBut(self, pathId, referenceListeners, changeListener);
+      referenceListeners = [changeListener];
     },
-
-    /**
-     * Destroy reference. Unobserve all observers, set all endpoints of reference to dead.
-     * For cleaning up memory.
-     *
-     * @api public
-     * @module reference.destroy
-     * @returns {Void}
-     */
     destroy: function () {
-      removeAllListenersBut(listenerNs);
-      cursor = undefined;
+      removeAllListenersBut(self, pathId, referenceListeners);
+      referenceListeners = void 0;
+      cursor = void 0;
 
       this._dead = true;
-      this.observe = undefined;
-      this.unobserveAll = undefined;
-      this.cursor = undefined;
-      this.destroy = undefined;
+      this.observe = void 0;
+      this.unobserveAll = void 0;
+      this.cursor = void 0;
+      this.destroy = void 0;
     }
   };
 };
 
-/**
- * Force emitting swap event. Pass on new, old and keypath passed to swap.
- * If newData is `null` current will be used.
- *
- * @param {Object} newData - Immutable object for the new data to emit
- * @param {Object} oldData - Immutable object for the old data to emit
- * @param {String} keyPath - Structure path (in tree) to where the changes occured.
- *
- * @api public
- * @module structure.forceHasSwapped
- * @returns {Void}
- */
 Structure.prototype.forceHasSwapped = function (newData, oldData, keyPath) {
   this.emit('swap', newData || this.current, oldData, keyPath);
-  possiblyEmitAnimationFrameEvent(this, newData || this.current, oldData, keyPath);
+  possiblyEmitAnimationFrameEvent(this, newData || this.current, oldData, keyPath)
 };
 
-
-/**
- * Undo IFF history is activated and there are steps to undo. Returns new current
- * immutable structure.
- *
- * **Will NOT emit swap when redo. You have to do this yourself**.
- *
- * Define number of steps to undo in param.
- *
- * @param {Number} steps - Number of steps to undo
- *
- * @api public
- * @module structure.undo
- * @returns {Object} New Immutable structure after undo
- */
-Structure.prototype.undo = function(steps) {
-  this._currentRevision -= steps || 1;
+Structure.prototype.undo = function(back) {
+  this._currentRevision -= back || 1;
   if (this._currentRevision < 0) {
     this._currentRevision = 0;
   }
@@ -1098,17 +773,6 @@ Structure.prototype.undo = function(steps) {
   return this.current;
 };
 
-/**
- * Redo IFF history is activated and you can redo. Returns new current immutable structure.
- * Define number of steps to redo in param.
- * **Will NOT emit swap when redo. You have to do this yourself**.
- *
- * @param {Number} head - Number of steps to head to in redo
- *
- * @api public
- * @module structure.redo
- * @returns {Object} New Immutable structure after redo
- */
 Structure.prototype.redo = function(head) {
   this._currentRevision += head || 1;
   if (this._currentRevision > this.history.count() - 1) {
@@ -1119,18 +783,6 @@ Structure.prototype.redo = function(head) {
   return this.current;
 };
 
-/**
- * Undo IFF history is activated and passed `structure` exists in history.
- * Returns the same immutable structure as passed as argument.
- *
- * **Will NOT emit swap after undo. You have to do this yourself**.
- *
- * @param {Object} structure - Immutable structure to redo until
- *
- * @api public
- * @module structure.undoUntil
- * @returns {Object} New Immutable structure after undo
- */
 Structure.prototype.undoUntil = function(structure) {
   this._currentRevision = this.history.indexOf(structure);
   this.current = structure;
@@ -1139,7 +791,9 @@ Structure.prototype.undoUntil = function(structure) {
 };
 
 
-// Private decorators.
+/************************************
+ * Private decorators.
+ ***********************************/
 
 // Update history if history is active
 function handleHistory (emitter, fn) {
@@ -1162,13 +816,13 @@ var possiblyEmitAnimationFrameEvent = (function () {
     return function () {};
   }
 
-  return function requestAnimationFrameEmitter (emitter, newStructure, oldData, keyPath) {
+  return function requestAnimationFrameEmitter (emitter, newStructure, oldData) {
     if (queuedChange) return;
     queuedChange = true;
 
     requestAnimationFrame(function () {
       queuedChange = false;
-      emitter.emit('next-animation-frame', newStructure, oldData, keyPath);
+      emitter.emit('next-animation-frame', newStructure, oldData);
     });
   };
 }());
@@ -1194,27 +848,23 @@ function handlePersisting (emitter, fn) {
     var info = analyze(newData, oldData, path);
 
     if (info.eventName) {
-      emitter.emit.apply(emitter, [info.eventName].concat(info.args));
+      emitter.emit.apply(emitter, [info.eventName].concat(info.arguments));
     }
     return newStructure;
   };
 }
 
-// Private helpers.
+/************************************
+ * Private helpers.
+ ***********************************/
 
-function removeAllListenersBut(listeners, except) {
+function removeAllListenersBut(self, pathId, listeners, except) {
   if (!listeners) return;
-  var fn;
-  for (var i= 0; i < listeners.length; i++) {
-    fn = listeners[i];
-    if (!except || fn !== except) {
-      var index = listeners.indexOf(fn);
-      if (index > -1) {
-        i--;
-        listeners.splice(index, 1);
-      }
-    }
-  }
+  listeners.forEach(function (fn) {
+    if (except && fn === except) return;
+    var index = self._pathListeners[pathId].indexOf(fn);
+    self._pathListeners[pathId].splice(index, 1);
+  });
 }
 
 function analyze (newData, oldData, path) {
@@ -1224,22 +874,22 @@ function analyze (newData, oldData, path) {
   var inOld = oldData && hasIn(oldData, path);
   var inNew = newData && hasIn(newData, path);
 
-  var args, eventName;
+  var arguments, eventName;
 
   if (inOld && !inNew) {
     eventName = 'delete';
-    args = [path, oldObject];
+    arguments = [path, oldObject];
   } else if (inOld && inNew) {
     eventName = 'change';
-    args = [path, newObject, oldObject];
+    arguments = [path, newObject, oldObject];
   } else if (!inOld && inNew) {
     eventName = 'add';
-    args = [path, newObject];
+    arguments = [path, newObject];
   }
 
   return {
     eventName: eventName,
-    args: args
+    arguments: arguments
   };
 }
 
@@ -1254,35 +904,18 @@ function hasIn(cursor, path) {
 function pathString(path) {
   var topLevel = 'global';
   if (!path || !path.length) return topLevel;
-  if (typeof path == 'string') {
-    return topLevel + '.' + path;
-  } else {
-    return [topLevel].concat(path).join('.');
-  }
+  return [topLevel].concat(path).join('|');
 }
 
 function listListenerMatching (listeners, basePath) {
-  var path = basePath.split("."),
-      pathStr = "",
-      matches = [];
-
-  path.forEach(function(pathPart) {
-    pathStr = pathStr ? pathStr + "." + pathPart : pathPart;
-    matches = matches.concat(getListenerNs(listeners, pathStr));
-  });
-
-  return matches;
-}
-
-function getListenerNs (listeners, basePath) {
-  var matchedListeners = utils.deepGet(listeners, basePath + "._listeners");
-
-  if (!matchedListeners) {
-    matchedListeners = [];
-    utils.deepSet(listeners, basePath + "._listeners", matchedListeners);
+  var newListeners = [];
+  for (var key in listeners) {
+    if (!listeners.hasOwnProperty(key)) return;
+    if (basePath.indexOf(key) !== 0) continue;
+    newListeners.push(listeners[key]);
   }
 
-  return matchedListeners;
+  return newListeners;
 }
 
 function onlyOnEvent(eventName, fn) {
@@ -1315,50 +948,12 @@ function immutableSafeCheck (ns, method, data) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./utils":6,"eventemitter3":2,"immutable/contrib/cursor":3,"inherits":4}],6:[function(_dereq_,module,exports){
-'use strict';
+
 
 module.exports.generateRandomKey = function (len) {
   len = len || 10;
   return Math.random().toString(36).substring(2).substring(0, len);
 };
-
-module.exports.deepGet = function(collection, path){
-  var current = collection,
-      properties = path.split(".");
-
-  properties.forEach(function(property) {
-    if (current && property in current) {
-      current = current[property];
-    } else {
-      current = undefined;
-      return false;
-    }
-  });
-
-  return current;
-};
-
-module.exports.deepSet = function(collection, path, value){
-  var currentObject = collection,
-      properties = path.split(".");
-
-  properties.forEach(function(property, index) {
-    if (index + 1 === properties.length) {
-      currentObject[property] = value;
-    } else if (!(typeof currentObject[property] == 'object')) {
-      currentObject[property] = isArrayKey(properties[index + 1]) ? [] : {};
-    }
-    currentObject = currentObject[property];
-  });
-
-  return collection;
-};
-
-function isArrayKey(key){
-  var array = [];
-  array[key] = null;
-  return array.length > 0;
-}
 
 },{}]},{},[1])(1)
 });

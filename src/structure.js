@@ -60,12 +60,13 @@ function Structure (options) {
     this._currentRevision = 0;
   }
 
-  this._pathListeners = {};
+  this._pathListeners = [];
   this.on('swap', function (newData, oldData, keyPath) {
-    listListenerMatching(self._pathListeners, keyPath).forEach(function (fn) {
-      if (typeof fn == 'function') {
+    listListenerMatching(self._pathListeners, pathString(keyPath)).forEach(function (fns) {
+      fns.forEach(function (fn) {
+        if (typeof fn !== 'function') return;
         fn(newData, oldData, keyPath);
-      }
+      });
     });
   });
 
@@ -97,7 +98,7 @@ module.exports = Structure;
  */
 Structure.prototype.cursor = function (path) {
   var self = this;
-  path = path && path.substr ? [path] : path || [];
+  path = path || [];
 
   if (!this.current) {
     throw new Error('No structure loaded.');
@@ -106,7 +107,7 @@ Structure.prototype.cursor = function (path) {
   var changeListener = function (newRoot, oldRoot, path) {
     if(self.current === oldRoot) {
       self.current = newRoot;
-    } else if (!hasIn(newRoot, path)) {
+    } else if(!hasIn(newRoot, path)) {
       // Othewise an out-of-sync change occured. We ignore `oldRoot`, and focus on
       // changes at path `path`, and sync this to `self.current`.
       self.current = self.current.removeIn(path);
@@ -166,19 +167,13 @@ Structure.prototype.reference = function (path) {
   if (isCursor(path) && path._keyPath) {
     path = path._keyPath;
   }
+  var self = this, pathId = pathString(path);
+  var listenerNs = self._pathListeners[pathId];
+  var cursor = this.cursor(path);
 
-  path = path && path.substr ? [path] : path || [];
-
-  var self = this,
-      listenerNs = getListenerNs(self._pathListeners, path),
-      cursor = this.cursor(path),
-      changeListener = function() {
-        cursor = self.cursor(path);
-      };
-
-  if (!listenerNs[0]) {
-    listenerNs.push(changeListener);
-  }
+  var changeListener = function (newRoot, oldRoot, changedPath) { cursor = self.cursor(path); };
+  var referenceListeners = [changeListener];
+  this._pathListeners[pathId] = !listenerNs ? referenceListeners : listenerNs.concat(changeListener);
 
   return {
     /**
@@ -219,13 +214,20 @@ Structure.prototype.reference = function (path) {
         newFn = onlyOnEvent(eventName, newFn);
       }
 
-      listenerNs.push(newFn);
+      self._pathListeners[pathId] = self._pathListeners[pathId].concat(newFn);
+      referenceListeners = referenceListeners.concat(newFn);
 
       return function unobserve () {
-        var fnIndex = listenerNs.indexOf(newFn);
-        if (fnIndex > -1) {
-          listenerNs.splice(fnIndex, 1);
+        var fnIndex = self._pathListeners[pathId].indexOf(newFn);
+        var localListenerIndex = referenceListeners.indexOf(newFn);
+
+        if (referenceListeners[localListenerIndex] === newFn) {
+          referenceListeners.splice(localListenerIndex, 1);
         }
+
+        if (!self._pathListeners[pathId]) return;
+        if (self._pathListeners[pathId][fnIndex] !== newFn) return;
+        self._pathListeners[pathId].splice(fnIndex, 1);
       };
     },
 
@@ -249,12 +251,9 @@ Structure.prototype.reference = function (path) {
      * @module reference.cursor
      * @returns {Cursor} Immutable.js cursor
      */
-    cursor: function (path) {
-      if (path) {
-        return cursor.cursor(path);
-      } else {
-        return cursor;
-      }
+    cursor: function (subPath) {
+      if (subPath) return cursor.cursor(subPath);
+      return cursor;
     },
 
     /**
@@ -265,7 +264,8 @@ Structure.prototype.reference = function (path) {
      * @returns {Void}
      */
     unobserveAll: function () {
-      removeAllListenersBut(listenerNs, changeListener);
+      removeAllListenersBut(self, pathId, referenceListeners, changeListener);
+      referenceListeners = [changeListener];
     },
 
     /**
@@ -277,7 +277,8 @@ Structure.prototype.reference = function (path) {
      * @returns {Void}
      */
     destroy: function () {
-      removeAllListenersBut(listenerNs);
+      removeAllListenersBut(self, pathId, referenceListeners);
+      referenceListeners = void 0;
       cursor = void 0;
 
       this._dead = true;
@@ -435,19 +436,13 @@ function handlePersisting (emitter, fn) {
 
 // Private helpers.
 
-function removeAllListenersBut(listeners, except) {
+function removeAllListenersBut(self, pathId, listeners, except) {
   if (!listeners) return;
-  var fn;
-  for (var i= 0; i < listeners.length; i++) {
-    fn = listeners[i];
-    if (!except || fn !== except) {
-      var index = listeners.indexOf(fn);
-      if (index > -1) {
-        i--;
-        listeners.splice(index, 1);
-      }
-    }
-  }
+  listeners.forEach(function (fn) {
+    if (except && fn === except) return;
+    var index = self._pathListeners[pathId].indexOf(fn);
+    self._pathListeners[pathId].splice(index, 1);
+  });
 }
 
 function analyze (newData, oldData, path) {
@@ -484,6 +479,7 @@ function hasIn(cursor, path) {
   return cursor.getIn(path, NOT_SET) !== NOT_SET;
 }
 
+<<<<<<< HEAD
 function listListenerMatching (listeners, path) {
   var pathArray = [],
       matches = [];
@@ -506,9 +502,23 @@ function getListenerNs (listeners, path) {
   if (!matchedListeners) {
     matchedListeners = [];
     utils.deepSet(listeners, path, matchedListeners);
+=======
+function pathString(path) {
+  var topLevel = 'global';
+  if (!path || !path.length) return topLevel;
+  return [topLevel].concat(path).join('|');
+}
+
+function listListenerMatching (listeners, basePath) {
+  var newListeners = [];
+  for (var key in listeners) {
+    if (!listeners.hasOwnProperty(key)) return;
+    if (basePath.indexOf(key) !== 0) continue;
+    newListeners.push(listeners[key]);
+>>>>>>> parent of 676bc1e... # This is a combination of 2 commits.
   }
 
-  return matchedListeners;
+  return newListeners;
 }
 
 function onlyOnEvent(eventName, fn) {
