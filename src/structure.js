@@ -487,6 +487,30 @@ function hasIn(cursor, path) {
   return cursor.getIn(path, NOT_SET) !== NOT_SET;
 }
 
+<<<<<<< HEAD
+function listListenerMatching (listeners, path) {
+  var pathArray = [],
+      matches = [];
+
+  path = path || [];
+
+  path.forEach(function(pathPart) {
+    pathArray = pathArray.concat(pathPart);
+    matches = matches.concat(getListenerNs(listeners, pathArray));
+  });
+
+  return matches;
+}
+
+function getListenerNs (listeners, path) {
+  path = path || [];
+  path = path.concat("__listeners__");
+  var matchedListeners = utils.deepGet(listeners, path);
+
+  if (!matchedListeners) {
+    matchedListeners = [];
+    utils.deepSet(listeners, path, matchedListeners);
+=======
 function pathString(path) {
   var topLevel = 'global';
   if (!path || !path.length) return topLevel;
@@ -499,6 +523,7 @@ function listListenerMatching (listeners, basePath) {
     if (!listeners.hasOwnProperty(key)) continue;
     if (basePath.indexOf(key) !== 0) continue;
     newListeners.push(listeners[key]);
+>>>>>>> parent of 676bc1e... # This is a combination of 2 commits.
   }
 
   return newListeners;

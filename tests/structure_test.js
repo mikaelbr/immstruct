@@ -749,6 +749,7 @@ describe('structure', function () {
       var newCursor = ref.cursor().update(function () {
         return 'updated';
       });
+
       newCursor.deref().should.equal('updated');
       ref.cursor().deref().should.equal('updated');
     });
@@ -789,7 +790,7 @@ describe('structure', function () {
       });
 
       var ref = structure.reference('foo');
-      var newCursor = ref.cursor().cursor('bar').update(function (state) {
+      var newCursor = ref.cursor().cursor('bar').update(function(state) {
         return 'updated';
       });
       newCursor.deref().should.equal('updated');
