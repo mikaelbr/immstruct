@@ -294,7 +294,7 @@ function listListenerMatching (listeners, basePath) {
   var newListeners = [];
   for (var key in listeners) {
     if (!listeners.hasOwnProperty(key)) return;
-    if (basePath.indexOf(key) !== 0) continue;
+    if (basePath.indexOf(key) !== 0 && key.indexOf(basePath) !== 0) continue;
     newListeners.push(listeners[key]);
   }
 
