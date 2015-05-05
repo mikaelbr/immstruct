@@ -3,8 +3,26 @@
 * Authors: Mikael Brevik, @torgeir
 ***************************************/
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.immstruct=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
+'use strict';
 var Structure = _dereq_('./src/structure');
 
+/**
+ * Creates a new instance of Immstruct, having it's own list
+ * of Structure instances.
+ *
+ * ### Examples:
+ *
+ *     var ImmstructInstance = require('immstruct').Immstruct;
+ *     var immstruct = new ImmstructInstance();
+ *     var structure = immstruct.get({ data: });
+ *
+ * @property {Array} instances Array of `Structure` instances.
+ *
+ * @class {Immstruct}
+ * @constructor
+ * @returns {Immstruct}
+ * @api public
+ */
 function Immstruct () {
   if (!(this instanceof Immstruct)) {
     return new Immstruct();
@@ -13,6 +31,24 @@ function Immstruct () {
   this.instances = {};
 }
 
+/**
+ *
+ * Gets or creates a new instance of {Structure}. Provide optional
+ * key to be able to retrieve it from list of instances. If no key
+ * is provided, a random key will be generated.
+ *
+ * ### Examples:
+ * ```js
+ * var immstruct = require('immstruct');
+ * var structure = immstruct.get('myStruct', { foo: 'Hello' });
+ * ```
+ * @param {String} [key] - defaults to random string
+ * @param {Object|Immutable} [data] - defaults to empty data
+ *
+ * @returns {Structure}
+ * @module immstruct.get
+ * @api public
+ */
 Immstruct.prototype.get = function (key, data) {
   return getInstance(this, {
     key: key,
@@ -20,10 +56,38 @@ Immstruct.prototype.get = function (key, data) {
   });
 };
 
+/**
+ * Clear the entire list of `Structure` instances from the Immstruct
+ * instance. You would do this to start from scratch, freeing up memory.
+ *
+ * ### Examples:
+ *
+ *     var immstruct = require('immstruct');
+ *     immstruct.clear();
+ *
+ * @module immstruct.clear
+ * @api public
+ */
 Immstruct.prototype.clear = function () {
   this.instances = {};
 };
 
+/**
+ * Remove one `Structure` instance from the Immstruct instances list.
+ * Provided by key
+ *
+ * ### Examples:
+ *
+ *     var immstruct = require('immstruct');
+ *     immstruct('myKey', { foo: 'hello' });
+ *     immstruct.remove('myKey');
+ *
+ * @param {String} key
+ *
+ * @module immstruct.remove
+ * @api public
+ * @returns {Boolean}
+ */
 Immstruct.prototype.remove = function (key) {
   return delete this.instances[key];
 };
@@ -932,12 +996,18 @@ Structure.prototype.reference = function (path) {
         newFn = onlyOnEvent(eventName, newFn);
       }
 
-      self._subscribe(path, newFn);
-      unobservers = unobservers.add(newFn);
+      var fn = function(keyPath, oldState, newState) {
+        if (oldState.getIn(path) !== newState.getIn(path)) {
+          newFn(keyPath, oldState, newState);
+        }
+      };
+
+      self._subscribe(path, fn);
+      unobservers = unobservers.add(fn);
 
 
       return function() {
-        self._unsubscribe(path, newFn);
+        self._unsubscribe(path, fn);
       };
     },
 

@@ -238,12 +238,18 @@ Structure.prototype.reference = function (path) {
         newFn = onlyOnEvent(eventName, newFn);
       }
 
-      self._subscribe(path, newFn);
-      unobservers = unobservers.add(newFn);
+      var fn = function(keyPath, oldState, newState) {
+        if (oldState.getIn(path) !== newState.getIn(path)) {
+          newFn(keyPath, oldState, newState);
+        }
+      };
+
+      self._subscribe(path, fn);
+      unobservers = unobservers.add(fn);
 
 
       return function() {
-        self._unsubscribe(path, newFn);
+        self._unsubscribe(path, fn);
       };
     },
 
