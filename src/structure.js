@@ -66,12 +66,13 @@ function Structure (options) {
       Infinity;
   }
 
+   this._referencelisteners = Immutable.Map();
+
   this._pathListeners = Immutable.Map();
   this.on('swap', function (newData, oldData, keyPath) {
-    var listenerData = listMatchingOrCreateEmptyList(self._pathListeners, keyPath);
-    self._pathListeners = listenerData.listeners;
-
-    listenerData.matched.forEach(function (fn) {
+    pathCombinations(keyPath).reduce(function(fns, path) {
+      return fns.concat(self._referencelisteners.get(Immutable.List(path), Immutable.Set()));
+    }, Immutable.Set()).forEach(function(fn) {
       fn(keyPath, newData, oldData);
     });
   });
@@ -81,6 +82,20 @@ function Structure (options) {
 inherits(Structure, EventEmitter);
 module.exports = Structure;
 
+Structure.prototype._subscribe = function(path, fn) {
+  this._referencelisteners = pathCombinations(path).reduce(function(listeners, path) {
+    return listeners.updateIn([Immutable.List(path)], Immutable.Set(), function(old) {
+      return old.add(fn);
+    });
+  }, this._referencelisteners)
+};
+Structure.prototype._unsubscribe = function(path, fn) {
+  this._referencelisteners = pathCombinations(path).reduce(function(listeners, path) {
+    return listeners.updateIn([Immutable.List(path)], Immutable.Set(), function(old) {
+      return old.remove(fn);
+    });
+  }, this._referencelisteners);
+};
 
 /**
  * Create a Immutable.js Cursor for a given `path` on the `current` structure (see `Structure.current`).
@@ -177,21 +192,12 @@ Structure.prototype.reference = function (path) {
   path = valToKeyPath(path) || [];
 
   var self = this,
-      listenerData = listMatchingOrCreateEmptyListOnNamespace(self._pathListeners, path),
-      listenerNs = listenerData.matched,
-      unobservers = [],
-      cursor = this.cursor(path);
+      cursor = this.cursor(path),
+      unobservers = Immutable.Set();
 
-  function cursorRefresher() {cursor = self.cursor(path)}
+  function cursorRefresher() {cursor = self.cursor(path); }
 
-  function addCursorRefresher() {
-    unobservers.push(unobserver(listenerNs, cursorRefresher));
-    listenerNs.push(cursorRefresher);
-  }
-
-  addCursorRefresher();
-
-  self._pathListeners = listenerData.listeners;
+  this._subscribe(path, cursorRefresher);
 
   return {
     /**
@@ -232,12 +238,13 @@ Structure.prototype.reference = function (path) {
         newFn = onlyOnEvent(eventName, newFn);
       }
 
-      var unobserveFn = unobserver(listenerNs, newFn);
+      self._subscribe(path, newFn);
+      unobservers = unobservers.add(newFn);
 
-      unobservers.push(unobserveFn);
-      listenerNs.push(newFn);
 
-      return unobserveFn;
+      return function() {
+        self._unsubscribe(path, newFn);
+      };
     },
 
     /**
@@ -274,11 +281,13 @@ Structure.prototype.reference = function (path) {
      * @returns {Void}
      */
     unobserveAll: function (destroy) {
-      unobservers.forEach(function(unobserve) {
-        unobserve();
+      unobservers.forEach(function(fn) {
+        self._unsubscribe(path, fn);
       });
 
-      !destroy && addCursorRefresher();
+      if (destroy) {
+        self._unsubscribe(path, cursorRefresher);
+      }
     },
 
     /**
@@ -495,35 +504,12 @@ function hasIn(cursor, path) {
   return cursor.getIn(path, NOT_SET) !== NOT_SET;
 }
 
-function listMatchingOrCreateEmptyList (listeners, path) {
-  var pathArray = [];
-  return (path || []).reduce(function(acc, pathPart) {
-    pathArray = pathArray.concat(pathPart);
-    var listenerData = listMatchingOrCreateEmptyListOnNamespace(acc.listeners, pathArray);
-
-    return {
-      listeners: listenerData.listeners,
-      matched: acc.matched.concat(listenerData.matched)
-    };
-  }, {
-    listeners: listeners,
-    matched: []
-  });
-}
-
-function listMatchingOrCreateEmptyListOnNamespace (listeners, path) {
-  path = (path || []).concat(LISTENER_SENTINEL);
-  var matched = listeners.getIn(path);
-
-  if (!matched) {
-    matched = [];
-    listeners = listeners.setIn(path, matched);
-  }
-
-  return {
-    matched: matched,
-    listeners: listeners
-  };
+function pathCombinations(path) {
+  var paths = (path||[]).reduce(function(acc,segment) {
+    acc.push(acc[acc.length-1].concat(segment));
+    return acc;
+  }, [[]]);
+  return paths;
 }
 
 function onlyOnEvent(eventName, fn) {
