@@ -274,6 +274,7 @@ Structure.prototype.reference = function (path) {
      * @returns {Cursor} Immutable.js cursor
      */
     cursor: function (subPath) {
+      if (this._dead) return void 0;
       subPath = valToKeyPath(subPath);
       if (subPath) return cursor.cursor(subPath);
       return cursor;
@@ -286,14 +287,10 @@ Structure.prototype.reference = function (path) {
      * @module reference.unobserveAll
      * @returns {Void}
      */
-    unobserveAll: function (destroy) {
+    unobserveAll: function () {
       unobservers.forEach(function(fn) {
         self._unsubscribe(path, fn);
       });
-
-      if (destroy) {
-        self._unsubscribe(path, cursorRefresher);
-      }
     },
 
     /**
@@ -305,8 +302,8 @@ Structure.prototype.reference = function (path) {
      * @returns {Void}
      */
     destroy: function () {
-      this.unobserveAll(true);
       cursor = void 0;
+      unobservers.forEach(invoke);
 
       this._dead = true;
       this.observe = void 0;
@@ -532,18 +529,27 @@ function isCursor (potential) {
 
 // Check if passed structure is existing immutable structure.
 // From https://github.com/facebook/immutable-js/wiki/Upgrading-to-Immutable-v3#additional-changes
+var immutableCheckers = [
+  {name: 'Iterable', method: 'isIterable' },
+  {name: 'Seq', method: 'isSeq'},
+  {name: 'Map', method: 'isMap'},
+  {name: 'OrderedMap', method: 'isOrderedMap'},
+  {name: 'List', method: 'isList'},
+  {name: 'Stack', method: 'isStack'},
+  {name: 'Set', method: 'isSet'}
+];
 function isImmutableStructure (data) {
-  return immutableSafeCheck('Iterable', 'isIterable', data) ||
-          immutableSafeCheck('Seq', 'isSeq', data) ||
-          immutableSafeCheck('Map', 'isMap', data) ||
-          immutableSafeCheck('OrderedMap', 'isOrderedMap', data) ||
-          immutableSafeCheck('List', 'isList', data) ||
-          immutableSafeCheck('Stack', 'isStack', data) ||
-          immutableSafeCheck('Set', 'isSet', data);
+  return immutableCheckers.some(function (checkItem) {
+    return immutableSafeCheck(checkItem.name, checkItem.method, data);
+  });
 }
 
 function immutableSafeCheck (ns, method, data) {
   return Immutable[ns] && Immutable[ns][method] && Immutable[ns][method](data);
+}
+
+function invoke (fn) {
+  return fn();
 }
 
 function valToKeyPath(val) {
