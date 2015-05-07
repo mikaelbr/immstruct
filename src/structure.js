@@ -68,7 +68,6 @@ function Structure (options) {
 
    this._referencelisteners = Immutable.Map();
 
-  this._pathListeners = Immutable.Map();
   this.on('swap', function (newData, oldData, keyPath) {
     pathCombinations(keyPath).reduce(function(fns, path) {
       return fns.concat(self._referencelisteners.get(Immutable.List(path), Immutable.Set()));
@@ -82,20 +81,20 @@ function Structure (options) {
 inherits(Structure, EventEmitter);
 module.exports = Structure;
 
-Structure.prototype._subscribe = function(path, fn) {
-  this._referencelisteners = pathCombinations(path).reduce(function(listeners, path) {
+function subscribe(structure, path, fn) {
+  structure._referencelisteners = pathCombinations(path).reduce(function(listeners, path) {
     return listeners.updateIn([Immutable.List(path)], Immutable.Set(), function(old) {
       return old.add(fn);
     });
-  }, this._referencelisteners)
-};
-Structure.prototype._unsubscribe = function(path, fn) {
-  this._referencelisteners = pathCombinations(path).reduce(function(listeners, path) {
+  }, structure._referencelisteners)
+}
+function unsubscribe(structure, path, fn) {
+  structure._referencelisteners = pathCombinations(path).reduce(function(listeners, path) {
     return listeners.updateIn([Immutable.List(path)], Immutable.Set(), function(old) {
       return old.remove(fn);
     });
-  }, this._referencelisteners);
-};
+  }, structure._referencelisteners);
+}
 
 /**
  * Create a Immutable.js Cursor for a given `path` on the `current` structure (see `Structure.current`).
@@ -197,7 +196,7 @@ Structure.prototype.reference = function (path) {
 
   function cursorRefresher() {cursor = self.cursor(path); }
 
-  this._subscribe(path, cursorRefresher);
+  subscribe(this, path, cursorRefresher);
 
   return {
     /**
@@ -244,12 +243,12 @@ Structure.prototype.reference = function (path) {
         }
       };
 
-      self._subscribe(path, fn);
+      subscribe(self, path, fn);
       unobservers = unobservers.add(fn);
 
 
-      return function() {
-        self._unsubscribe(path, fn);
+      return function unobserve() {
+        unsubscribe(self, path, fn);
       };
     },
 
@@ -289,7 +288,7 @@ Structure.prototype.reference = function (path) {
      */
     unobserveAll: function () {
       unobservers.forEach(function(fn) {
-        self._unsubscribe(path, fn);
+        unsubscribe(self, path, fn);
       });
     },
 
