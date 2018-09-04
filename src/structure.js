@@ -589,8 +589,13 @@ function handleHistory (emitter, fn) {
   };
 }
 
-var _requestAnimationFrame = (typeof window !== 'undefined' &&
-  window.requestAnimationFrame) || utils.raf;
+var _requestAnimationFrame = (
+    typeof window !== 'undefined' && (
+      window.requestAnimationFrame.bind(window)
+      || window.webkitRequestAnimationFrame.bind(window)
+      || window.webkitRequestAnimationFrame.bind(window)
+      || window.mozRequestAnimationFrame.bind(window)
+      || window.mozRequestAnimationFrame.bind(window)) || utils.raf)
 
 // Update history if history is active
 function possiblyEmitAnimationFrameEvent (emitter, newStructure, oldData, keyPath) {
